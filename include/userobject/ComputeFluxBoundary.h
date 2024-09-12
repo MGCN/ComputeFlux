@@ -27,17 +27,17 @@
 // #include "ParrotSolver.h"
 
 
-class ComputeFluxUtopiaHD;
+class ComputeFluxBoundary;
 
 template <>
-InputParameters validParams<ComputeFluxUtopiaHD>();
+InputParameters validParams<ComputeFluxBoundary>();
 
-class ComputeFluxUtopiaHD : public GeneralUserObject
+class ComputeFluxBoundary : public GeneralUserObject
 {
 public:
   static InputParameters validParams();
 
-  ComputeFluxUtopiaHD(const InputParameters & params);
+  ComputeFluxBoundary(const InputParameters & params);
 
   virtual void initialize ()                   override;
   virtual void execute    ()                   override {};

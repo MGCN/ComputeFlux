@@ -8,7 +8,7 @@
 //* Licensed under LGPL 2.1, please see LICENSE for details
 //* https://www.gnu.org/licenses/lgpl-2.1.html
 
-#include "ComputeFluxUtopiaHD.h"
+#include "ComputeFluxBoundary.h"
 
 // MOOSE includes
 #include "Assembly.h"
@@ -37,11 +37,11 @@ inline void convert_mat(libMesh::SparseMatrix<libMesh::Number> &lm_mat, utopia::
     utopia::convert(p_mat, utopia_mat);
     }
 
-registerMooseObject("parrot2App", ComputeFluxUtopiaHD);
+registerMooseObject("parrot2App", ComputeFluxBoundary);
 
-// defineLegacyParams(ComputeFluxUtopiaHD);
+// defineLegacyParams(ComputeFluxBoundary);
 
-InputParameters ComputeFluxUtopiaHD::validParams()
+InputParameters ComputeFluxBoundary::validParams()
 {
   InputParameters params = GeneralUserObject::validParams();
 
@@ -93,7 +93,7 @@ InputParameters ComputeFluxUtopiaHD::validParams()
 
 }
 
-ComputeFluxUtopiaHD::ComputeFluxUtopiaHD(const InputParameters & parameters) :
+ComputeFluxBoundary::ComputeFluxBoundary(const InputParameters & parameters) :
 GeneralUserObject(parameters),
 _material(getParam<bool>("material")),
 _material_name( getParam<std::string>("material_name") ),
@@ -191,9 +191,9 @@ _multiapp_name(getParam<MultiAppName>("multi_app"))
   }
 }
 
-void ComputeFluxUtopiaHD::init()
+void ComputeFluxBoundary::init()
 {
-  std::cout<<"ComputeFluxUtopiaHD::init() start\n";
+  std::cout<<"ComputeFluxBoundary::init() start\n";
 
   _meshBase = &_equationSystemsM.get_mesh();
 
@@ -226,7 +226,7 @@ void ComputeFluxUtopiaHD::init()
   _linearImplicitSystemM[0].add_vector(_vec_boundary_name_M0.c_str());
   // _linearImplicitSystemM[0].add_vector(_vec_boundary_name_M1.c_str());
   // _linearImplicitSystemM[0].add_vector(_vec_boundary_name_M2.c_str());
-  // _linearImplicitSystemM[0].add_vector(_vec_dir_M.c_str());
+   _linearImplicitSystemM[0].add_vector(_vec_dir_M.c_str());
 
 
   MooseVariable & _f_var_p = F_problem.getStandardVariable(0,"pressure_F");
@@ -311,15 +311,15 @@ void ComputeFluxUtopiaHD::init()
   _neumannSidesetIds_M   = MooseMeshUtils::getBoundaryIDs(_meshBase[0], _neumannSidesetNames_M,   true);
   _neumannSidesetIds_F   = MooseMeshUtils::getBoundaryIDs(_meshBase[0], _neumannSidesetNames_F,   true);
 
-  std::cout<<"ComputeFluxUtopiaHD::init() stop\n";
+  std::cout<<"ComputeFluxBoundary::init() stop\n";
 }
 
-void ComputeFluxUtopiaHD::setDirichletMatrix()
+void ComputeFluxBoundary::setDirichletMatrix()
 {
-  std::cout<<"ComputeFluxUtopiaHD::setDirichletMatrix() start\n";
+  std::cout<<"ComputeFluxBoundary::setDirichletMatrix() start\n";
 
   NumericVector<Number> & dM = _linearImplicitSystemM[0].get_vector(_vec_dir_M.c_str());
-  dM=1.0;
+  dM=0.0;
 
 
   BoundaryInfo const & boundary_info = _meshBase[0].get_boundary_info();
@@ -338,7 +338,7 @@ void ComputeFluxUtopiaHD::setDirichletMatrix()
         dof_id_type index=di.at(0);
         _dirIds.push_back(index);
 
-        dM.set(index,0.0);
+        dM.set(index,1.0);
         break;
       }
     }
@@ -347,17 +347,17 @@ void ComputeFluxUtopiaHD::setDirichletMatrix()
   dM.close();
 
 
-  std::cout<<"ComputeFluxUtopiaHD::setDirichletMatrix() stop\n";
+  std::cout<<"ComputeFluxBoundary::setDirichletMatrix() stop\n";
 }
 
 
-void ComputeFluxUtopiaHD::setDirichletFracture()
+void ComputeFluxBoundary::setDirichletFracture()
 {
-  std::cout<<"ComputeFluxUtopiaHD::setDirichletFracture() start\n";
+  std::cout<<"ComputeFluxBoundary::setDirichletFracture() start\n";
 
   NumericVector<Number> & dF = _linearImplicitSystemF[0].get_vector(_vec_dir_F.c_str());
  
-  dF=1.0;
+  dF=0.0;
 
   BoundaryInfo const & boundary_info = _meshBaseF[0].get_boundary_info();
 
@@ -378,7 +378,7 @@ void ComputeFluxUtopiaHD::setDirichletFracture()
         dof_id_type index=di.at(0);
         _dirIds.push_back(index);
         //std::cout<<"index"<<index<<" and "<<_dirichletSidesetIds_F.at(i)<<std::endl;
-        dF.set(index,0.0);
+        dF.set(index,1.0);
         break;
       }
     }
@@ -387,12 +387,12 @@ void ComputeFluxUtopiaHD::setDirichletFracture()
   dF.close();
 
 
-  std::cout<<"ComputeFluxUtopiaHD::setDirichletFracture() stop\n";
+  std::cout<<"ComputeFluxBoundary::setDirichletFracture() stop\n";
 }
 
-void ComputeFluxUtopiaHD::solve()
+void ComputeFluxBoundary::solve()
 {
-  std::cout<<"ComputeFluxUtopiaHD::solveMatrix() start\n";
+  std::cout<<"ComputeFluxBoundary::solveMatrix() start\n";
 
   SparseMatrix<Number> & AM0 = _linearImplicitSystemM[0].get_matrix(_mat_domain_name_M0.c_str());
   NumericVector<Number> & fM0 = _linearImplicitSystemM[0].get_vector(_vec_flux_name_M0.c_str());
@@ -441,10 +441,10 @@ void ComputeFluxUtopiaHD::solve()
   NumericVector<Number> * solM = solutionPointer.get();
 
   
-  std::cout<<"ComputeFluxUtopiaHD::solveMatrix() stop\n";
+  std::cout<<"ComputeFluxBoundary::solveMatrix() stop\n";
 
 
-  std::cout<<"ComputeFluxUtopiaHD::solveFracture() start\n";
+  std::cout<<"ComputeFluxBoundary::solveFracture() start\n";
 
   SparseMatrix<Number> & AF0 = _linearImplicitSystemF[0].get_matrix(_mat_domain_name_F0.c_str());
   NumericVector<Number> & fF0 = _linearImplicitSystemF[0].get_vector(_vec_flux_name_F0.c_str());
@@ -502,7 +502,7 @@ void ComputeFluxUtopiaHD::solve()
   utopia::USparseMatrix A_M0, A_F0;
   //A_M1, A_F1, A_F2;
 
-  utopia::UVector rhs_M0, rhs_F0, sol_M, sol_F, flux_rhs0, d_F, d_M;
+  utopia::UVector rhs_M0, rhs_F0, sol_M, sol_F, flux_rhs0, d_F, d_M, m_m0, m_f0;
   // rhs_M1, rhs_F0, rhs_F1, sol_M, sol_F, m_m0, m_m1, m_f0, m_f1, flux_rhs0, flux_rhs1, rhs_F2, d_F, d_M;
 
   convert_vec(bM0, rhs_M0);
@@ -526,7 +526,7 @@ void ComputeFluxUtopiaHD::solve()
   opts.tags             = {} ;
 
 
-  std::cout<<"ComputeFluxUtopiaHD::GlobalOp \n";
+  std::cout<<"ComputeFluxBoundary::GlobalOp \n";
 
   utopia::MeshTransferOperator MtoGlobal(
      utopia::make_ref(_meshBase[0]),
@@ -562,7 +562,7 @@ void ComputeFluxUtopiaHD::solve()
   utopia::USparseMatrix _TGlobal_t   = utopia::transpose(_TGlobal);
 
 
-  // std::cout<<"ComputeFluxUtopiaHD::LocalFluxes stop\n";
+  // std::cout<<"ComputeFluxBoundary::LocalFluxes stop\n";
 
 
 
@@ -577,11 +577,15 @@ void ComputeFluxUtopiaHD::solve()
 
   utopia::UVector rhs0_F_d = utopia::e_mul(d_F, rhs_F0);
 
-  utopia::UVector rhs1_F_d = utopia::e_mul(d_F, rhs_F1);
+  // utopia::UVector rhs1_F_d = utopia::e_mul(d_F, rhs_F1);
 
   utopia::UVector fluxL_rhs0 = utopia::e_mul(d_M, fluxL_rhst0) + _TGlobal_t * rhs0_F_d ;
 
   // utopia::UVector fluxL_rhs1 = utopia::e_mul(d_M, fluxL_rhst1) + _TGlobal_t * rhs1_F_d ;
+
+
+
+  Real flux = utopia::sum(fluxL_rhs0) ;
 
   std::cout<<"Flux on dirichlet ==>"<< std::setprecision(6) << utopia::sum(fluxL_rhs0) << std::endl;
   // std::cout<<"New Fluxes on bloack 1 is ==>"<< std::setprecision(6) << utopia::sum(fluxL_rhs1) << std::endl;
@@ -591,36 +595,36 @@ void ComputeFluxUtopiaHD::solve()
 
 
   convert_vec(iM0, m_m0);
-  convert_vec(iM1, m_m1);
+  // convert_vec(iM1, m_m1);
 
 
   utopia::UVector flux_side_0 = utopia::e_mul(m_m0, fluxL_rhs0);
 
 
-  utopia::UVector flux_side_1 = -1.0 * utopia::e_mul(m_m1, fluxL_rhs1);
+  // utopia::UVector flux_side_1 = -1.0 * utopia::e_mul(m_m1, fluxL_rhs1);
 
   std::cout<<"END initialize\n";
 }
 
-void ComputeFluxUtopiaHD::write()
+// void ComputeFluxBoundary::write()
+// {
+//       std::cout<<"ComputeFluxBoundary::write() start\n";
+
+//       if(_has_exodus_file)
+//       {
+//         ExodusII_IO (_equationSystemsM.get_mesh()).write_equation_systems(_exodus_filename.c_str(), _equationSystemsM); //output_filename.c_str()
+//       }
+
+//       std::cout<<"ComputeFluxBoundary::write() stop\n";
+// }
+
+void ComputeFluxBoundary::del()
 {
-      std::cout<<"ComputeFluxUtopiaHD::write() start\n";
-
-      if(_has_exodus_file)
-      {
-        ExodusII_IO (_equationSystemsM.get_mesh()).write_equation_systems(_exodus_filename.c_str(), _equationSystemsM); //output_filename.c_str()
-      }
-
-      std::cout<<"ComputeFluxUtopiaHD::write() stop\n";
+      std::cout<<"ComputeFluxBoundary::del() start\n";
+      std::cout<<"ComputeFluxBoundary::del() stop\n";  
 }
 
-void ComputeFluxUtopiaHD::del()
-{
-      std::cout<<"ComputeFluxUtopiaHD::del() start\n";
-      std::cout<<"ComputeFluxUtopiaHD::del() stop\n";  
-}
-
-void ComputeFluxUtopiaHD::initialize()
+void ComputeFluxBoundary::initialize()
 {
 
       init();
@@ -632,9 +636,9 @@ void ComputeFluxUtopiaHD::initialize()
       // write();
 }
 
-void ComputeFluxUtopiaHD::assembleMatrix()
+void ComputeFluxBoundary::assembleMatrix()
 {
-  std::cout << "ComputeFluxUtopiaHD::assemble Matrix start\n";
+  std::cout << "ComputeFluxBoundary::assemble Matrix start\n";
 
   SparseMatrix <Number> & AM0=_linearImplicitSystemM[0].get_matrix( _mat_domain_name_M0.c_str() );
 
@@ -785,22 +789,22 @@ void ComputeFluxUtopiaHD::assembleMatrix()
 
                 _dof_map[0].constrain_element_matrix_and_vector (kel, rel, dof_indices_B, false);
 
-            if (elemId ==_block_0_id)
-            {
+            // if (elemId ==_block_0_id)
+            // {
               iM0.add_vector (rel  , dof_indices_B  );
-            }
-            else if(elemId ==_block_1_id)
-            {
-              iM1.add_vector (rel  , dof_indices_B  );
-            }
-            else if (elemId ==_block_2_id)
-            {
-              iM2.add_vector (rel  , dof_indices_B  );
-            }
-            else
-            {
-              mooseError("elemId does not belong to any block");
-            }
+            //}
+            // else if(elemId ==_block_1_id)
+            // {
+            //   iM1.add_vector (rel  , dof_indices_B  );
+            // }
+            // else if (elemId ==_block_2_id)
+            // {
+            //   iM2.add_vector (rel  , dof_indices_B  );
+            // }
+            // else
+            // {
+            //   mooseError("elemId does not belong to any block");
+            // }
           }
         }
       }
@@ -809,29 +813,30 @@ void ComputeFluxUtopiaHD::assembleMatrix()
       int count_0=0;
       int count_1=0;
       int count_2=0;
+      AM0.add_matrix (ke  , dof_indices  );
+      bM0.add_vector (re  , dof_indices  );
 
-      if (elemId ==_block_0_id)
-      {
-        count_0=count_0+1;
-        AM0.add_matrix (ke  , dof_indices  );
-        bM0.add_vector (re  , dof_indices  );
-      }
-      else if (elemId ==_block_1_id)
-      {
-        count_1 = count_1+1;
-        AM1.add_matrix (ke  , dof_indices  );
-        bM1.add_vector (re  , dof_indices  );
-      }
-      else if (_has_block_2_id == true && elemId ==_block_2_id)
-      {
-        count_2 = count_2+1;
-        AM2.add_matrix (ke  , dof_indices  );
-        bM2.add_vector (re  , dof_indices  );
-      }
-      else
-      {
-        mooseError("elemId does not belong to any block");
-      }
+    //   if (elemId ==_block_0_id)
+    //   {
+    //     count_0=count_0+1;
+ 
+    //   }
+    //   else if (elemId ==_block_1_id)
+    //   {
+    //     count_1 = count_1+1;
+    //     // AM1.add_matrix (ke  , dof_indices  );
+    //     // bM1.add_vector (re  , dof_indices  );
+    //   }
+    //   else if (_has_block_2_id == true && elemId ==_block_2_id)
+    //   {
+    //     count_2 = count_2+1;
+    //     // AM2.add_matrix (ke  , dof_indices  );
+    //     // bM2.add_vector (re  , dof_indices  );
+    //   }
+    //   else
+    //   {
+    //     mooseError("elemId does not belong to any block");
+    //   }
     }
 
     AM0.close();
@@ -861,14 +866,14 @@ void ComputeFluxUtopiaHD::assembleMatrix()
   iM0.close();
 
 
-  std::cout << "ComputeFluxUtopiaHD::assemble Matrix stop\n";
+  std::cout << "ComputeFluxBoundary::assemble Matrix stop\n";
 }
 
 
 
-void ComputeFluxUtopiaHD::assembleFracture()
+void ComputeFluxBoundary::assembleFracture()
 {
-  std::cout << "ComputeFluxUtopiaHD::assemble Fracture start\n";
+  std::cout << "ComputeFluxBoundary::assemble Fracture start\n";
 
   SparseMatrix <Number> & AF0=_linearImplicitSystemF[0].get_matrix( _mat_domain_name_F0.c_str() );
   // SparseMatrix <Number> & AF1=_linearImplicitSystemF[0].get_matrix( _mat_domain_name_F1.c_str() );
@@ -970,29 +975,9 @@ void ComputeFluxUtopiaHD::assembleFracture()
       }
 
     
-
-    if (elemId == 3)
-    {
-      count_0=count_0+1;
       AF0.add_matrix (ke  , dof_indices_F  );
       bF0.add_vector (re  , dof_indices_F  );
-      AF2.add_matrix (ke  , dof_indices_F  );
-      bF2.add_vector (re  , dof_indices_F  );
-    }
-    else if (elemId == 4)
-    {
-      count_1 = count_1+1;
-      //std::cout<<"Here I am"<<std::endl;
-      AF1.add_matrix (ke  , dof_indices_F  );
-      bF1.add_vector (re  , dof_indices_F  );
-      AF2.add_matrix (ke  , dof_indices_F  );
-      bF2.add_vector (re  , dof_indices_F  );
-    }
-    else
-    {
-      std::cout<<elemId<<std::endl;
-      mooseError("elemId does not belong to any block fracture 1");
-    }
+   
 
 
   }// elements loop
@@ -1005,13 +990,13 @@ void ComputeFluxUtopiaHD::assembleFracture()
   // bF2.close();
 
 
-  std::cout << "ComputeFluxUtopiaHD::assemble Fracture stop\n";
+  std::cout << "ComputeFluxBoundary::assemble Fracture stop\n";
 }
 
 
 
 Real
-ComputeFluxUtopiaHD::ComputeMaterialProprties(const Elem *elem)
+ComputeFluxBoundary::ComputeMaterialProprties(const Elem *elem)
 {
     Real permeability=1.0;
 
@@ -1031,7 +1016,7 @@ ComputeFluxUtopiaHD::ComputeMaterialProprties(const Elem *elem)
 
 
 Real
-ComputeFluxUtopiaHD::ComputeMaterialProprtiesFracture(const Elem *elem)
+ComputeFluxBoundary::ComputeMaterialProprtiesFracture(const Elem *elem)
 {
     Real permeability = _vector_value_f[0];
 
