@@ -1,0 +1,9 @@
+./run.sh  40  0
+./run.sh  40  1
+./run.sh  40  2
+./run.sh  40  3
+./run.sh  40  4
+./run.sh  40  5
+./run.sh  40  6
+./run.sh  40  7
+./run.sh  40  8
